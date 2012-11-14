@@ -1,7 +1,6 @@
 package org.neo4j.scala
 
 import org.neo4j.graphdb.index.{Index, RelationshipIndex}
-import scala.collection.mutable.{Map => mutableMap}
 import collection.JavaConversions._
 import org.neo4j.graphdb.{PropertyContainer, Node}
 
@@ -32,51 +31,23 @@ trait Neo4jIndexProvider {
    */
   def RelationIndexConfig: List[(String, IndexCustomConfig)] = Nil
 
-  /**
-   * private cache
-   */
-  private var nodeIndexStore: mutableMap[String, Index[Node]] = null
+  /** Lazy initializes Indexes for Nodes */
+  lazy val getNodeIndexStore: Map[String, Index[Node]] = (for {
+      (indexName, indexConfig) <- NodeIndexConfig
+      config = indexConfig match {
+        case Some(c) => getIndexManager.forNodes(indexName, c)
+        case _ => getIndexManager.forNodes(indexName)
+      }
+    } yield indexName -> config).toMap
 
-  /**
-   * private cache
-   */
-  private var relationIndexStore: mutableMap[String, RelationshipIndex] = null
-
-  /**
-   * lazy initializes Indexes for Nodes
-   */
-  private def getNodeIndexStore =
-    nodeIndexStore match {
-      case null =>
-        nodeIndexStore = mutableMap[String, Index[Node]]()
-        for (forNode <- NodeIndexConfig) {
-          nodeIndexStore += forNode._1 ->
-            (forNode._2 match {
-              case Some(config) => getIndexManager.forNodes(forNode._1, config)
-              case _ => getIndexManager.forNodes(forNode._1)
-            })
-        }
-        nodeIndexStore
-      case x => x
-    }
-
-  /**
-   * lazy initializes Indexes for Relations
-   */
-  private def getRelationIndexStore =
-    relationIndexStore match {
-      case null =>
-        relationIndexStore = mutableMap[String, RelationshipIndex]()
-        for (forRelation <- RelationIndexConfig) {
-          relationIndexStore += forRelation._1 ->
-            (forRelation._2 match {
-              case Some(config) => getIndexManager.forRelationships(forRelation._1, config)
-              case _ => getIndexManager.forRelationships(forRelation._1)
-            })
-        }
-        relationIndexStore
-      case x => x
-    }
+  /** Lazy initializes Indexes for Nodes */
+  lazy val getRelationIndexStore = (for {
+      (indexName, indexConfig) <- RelationIndexConfig
+      config = indexConfig match {
+        case Some(c) => getIndexManager.forRelationships(indexName, c)
+        case _ => getIndexManager.forRelationships(indexName)
+      }
+    } yield indexName -> config).toMap
 
   /**
    * returns the index manager

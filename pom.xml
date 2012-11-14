@@ -1,25 +1,26 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.neo4j</groupId>
     <artifactId>neo4j-scala</artifactId>
-    <packaging>jar</packaging>
+    <version>0.3.0-SNAPSHOT</version>
+
     <name>Neo4j Scala</name>
-    <version>0.2.0-M2-SNAPSHOT</version>
     <description>Scala wrapper for Neo4j Graph Database</description>
-    <url>http://github.com/fakod/neo4j-scala</url>
-    <inceptionYear>2011</inceptionYear>
+    <url>http://github.com/sirocchj/neo4j-scala</url>
+    <inceptionYear>2012</inceptionYear>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <scala.version>2.9.1</scala.version>
+
+        <scala.version>2.9.2</scala.version>
         <neo4j.version>1.8</neo4j.version>
         <neo4j.shell.version>1.8</neo4j.shell.version>
         <neo4j.cypher.version>1.8</neo4j.cypher.version>
         <neo4j.rest.version>1.8</neo4j.rest.version>
     </properties>
-
 
     <developers>
         <developer>
@@ -27,6 +28,15 @@
             <name>Christopher Schmidt</name>
             <timezone>+1</timezone>
             <email>info [at] FaKod.EU</email>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>sirocchj</id>
+            <name>Julien Jean Paul Sirocchi</name>
+            <timezone>+1</timezone>
+            <email>julien [dot] sirocchi [at] gmail [dot] com</email>
             <roles>
                 <role>developer</role>
             </roles>
@@ -44,7 +54,6 @@
         </snapshotRepository>
     </distributionManagement>
 
-
     <repositories>
         <repository>
             <id>neo4j-public-repository</id>
@@ -54,7 +63,6 @@
             <id>fakod-snapshots</id>
             <url>https://raw.github.com/FaKod/fakod-mvn-repo/master/snapshots</url>
         </repository>
-
     </repositories>
 
     <dependencies>
@@ -66,20 +74,20 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.7</version>
+            <version>4.10</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.specs2</groupId>
-            <artifactId>specs2_2.9.1</artifactId>
-            <version>1.6.1</version>
+            <artifactId>specs2_${scala.version}</artifactId>
+            <version>1.12.1</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.specs2</groupId>
-            <artifactId>specs2-scalaz-core_2.9.1</artifactId>
+            <artifactId>specs2-scalaz-core_${scala.version}</artifactId>
             <version>6.0.1</version>
             <scope>test</scope>
         </dependency>
@@ -113,8 +121,13 @@
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-cypher</artifactId>
             <version>${neo4j.cypher.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-library</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -124,6 +137,12 @@
                 <artifactId>scala-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
+                    <args>
+                        <arg>-deprecation</arg>
+                    </args>
+                    <javacArgs>
+                        <javacArg>-Xlint:deprecation</javacArg>
+                    </javacArgs>
                     <recompileMode>incremental</recompileMode>
                 </configuration>
                 <executions>
@@ -136,7 +155,7 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>scala-test-compile</id>
+                        <id>scala-test-compile-first</id>
                         <phase>process-test-resources</phase>
                         <goals>
                             <goal>testCompile</goal>
@@ -144,10 +163,9 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.0.2</version>
+                <version>2.5.1</version>
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
@@ -161,11 +179,10 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.9</version>
+                <version>2.12.4</version>
                 <configuration>
                     <testFailureIgnore>false</testFailureIgnore>
                     <!--excludes>
@@ -175,23 +192,21 @@
                         <include>**/unittest/*.java</include>
                     </includes>
                 </configuration>
-
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.3.1</version>
+                <version>2.4</version>
                 <configuration>
                     <archive>
                         <addMavenDescriptor>false</addMavenDescriptor>
                     </archive>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.1.2</version>
+                <version>2.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -203,6 +218,7 @@
             </plugin>
         </plugins>
     </build>
+
     <reporting>
         <plugins>
             <plugin>
@@ -215,4 +231,5 @@
             </plugin>
         </plugins>
     </reporting>
+
 </project>

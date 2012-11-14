@@ -17,6 +17,7 @@ class IndexTestSpec extends SpecificationWithJUnit with Neo4jWrapper with Embedd
 
   override def NodeIndexConfig = ("MyTestIndex", Map("provider" -> "lucene", "type" -> "fulltext")) :: Nil
 
+  val nodeIndex = getNodeIndex("MyTestIndex").get
 
   "Neo4jIndexProvider" should {
 
@@ -26,21 +27,19 @@ class IndexTestSpec extends SpecificationWithJUnit with Neo4jWrapper with Embedd
 
     "use the fulltext search index" in {
 
-      val nodeIndex = getNodeIndex("MyTestIndex").get
-
       withTx {
         implicit db =>
 
-        val theMatrix = createNode
-        val theMatrixReloaded = createNode
-        theMatrixReloaded.setProperty("name", "theMatrixReloaded")
+          val theMatrix = createNode
+          val theMatrixReloaded = createNode
+          theMatrixReloaded.setProperty("name", "theMatrixReloaded")
 
-        nodeIndex +=(theMatrix, "title", "The Matrix")
-        nodeIndex +=(theMatrixReloaded, "title", "The Matrix Reloaded")
+          nodeIndex +=(theMatrix, "title", "The Matrix")
+          nodeIndex +=(theMatrixReloaded, "title", "The Matrix Reloaded")
 
-        // search in the fulltext index
-        val found = nodeIndex.query("title", "reloAdEd")
-        found.size must beGreaterThanOrEqualTo(1)
+          // search in the fulltext index
+          val found = nodeIndex.query("title", "reloAdEd")
+          found.size must beGreaterThanOrEqualTo(1)
       }
     }
 
@@ -51,15 +50,17 @@ class IndexTestSpec extends SpecificationWithJUnit with Neo4jWrapper with Embedd
       withTx {
         implicit db =>
 
-        val found = nodeIndex.query("title", "reloAdEd")
-        val size = found.size
-        for (f <- found.iterator)
-          nodeIndex -= f
+          val found = nodeIndex.query("title", "reloAdEd")
+          val size = found.size
+          for (f <- found.iterator)
+            nodeIndex -= f
 
-        // search in the fulltext index
-        val found2 = nodeIndex.query("title", "reloAdEd")
-        found2.size must beLessThanOrEqualTo(size)
+          // search in the fulltext index
+          val found2 = nodeIndex.query("title", "reloAdEd")
+          found2.size must beLessThanOrEqualTo(size)
       }
     }
+
   }
+
 }
