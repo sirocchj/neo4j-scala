@@ -54,4 +54,5 @@ trait Neo4jWrapperImplicits {
 
     def toCCPossible[T: Manifest]: Boolean = Neo4jWrapper.toCCPossible[T](pc)
   }
+
 }

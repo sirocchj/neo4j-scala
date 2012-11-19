@@ -5,10 +5,9 @@ import collection.mutable.Buffer
 import org.neo4j.graphdb._
 import scala.Some
 
-/**
- * Iterator convenience. Mapps a Property Container Iterator to a T Iterator
- * Nodes that can't be converted to T are returned as null
- */
+/** Iterator convenience. Maps a Property Container Iterator to a T Iterator
+  * Nodes that can't be converted to T are returned as null
+  */
 class TypedPropertyContainerIterator[T: Manifest](pcIter: Iterator[PropertyContainer]) extends Iterable[T] with Neo4jWrapperImplicits {
   def iterator = new Iterator[T] {
     def hasNext = pcIter.hasNext

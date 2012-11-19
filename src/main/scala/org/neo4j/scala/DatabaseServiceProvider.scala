@@ -1,19 +1,32 @@
 package org.neo4j.scala
 
 import org.neo4j.kernel.EmbeddedGraphDatabase
-import org.neo4j.kernel.impl.batchinsert.{BatchInserter, BatchInserterImpl}
 import org.neo4j.rest.graphdb.RestGraphDatabase
-import java.net.URI
-import java.util.{HashMap => jMap}
+import org.neo4j.unsafe.batchinsert.BatchInserters
+
+import collection.JavaConversions.mutableMapAsJavaMap
+import collection.mutable.{Map => MMap}
+import sys.ShutdownHookThread
+import scala.util.control.Exception._
+
+import java.net.{MalformedURLException, URL}
+import org.neo4j.graphdb.GraphDatabaseService
 
 /**
  * Interface for a GraphDatabaseServiceProvider
  * must be implemented by and Graph Database Service Provider
  */
 trait GraphDatabaseServiceProvider {
-  val ds: DatabaseService
-}
 
+  def store: String
+
+  def ds: DatabaseService
+
+  implicit def wrapGraphDatabaseService(gds: GraphDatabaseService) = DatabaseServiceImpl(gds)
+
+  implicit def unwrapGraphDatabaseService(ds: DatabaseService) = ds.gds
+
+}
 
 /**
  * provides a specific Database Service
@@ -21,130 +34,81 @@ trait GraphDatabaseServiceProvider {
  */
 trait EmbeddedGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider {
 
-  /**
-   * directory where to store the data files
-   */
-  def neo4jStoreDir: String
-
-  /**
-   * setup configuration parameters
-   * @return Map[String, String] configuration parameters
-   */
+  /** Setup configuration parameters
+    *
+    * @return Map[String, String] configuration parameters
+    */
   def configParams = Map[String, String]()
 
-  /**
-   * using an instance of an embedded graph database
-   */
-  val ds: DatabaseService = {
-    import collection.JavaConversions.mapAsJavaMap
-    DatabaseServiceImpl(
-      new EmbeddedGraphDatabase(neo4jStoreDir, new jMap[String, String](configParams))
-    )
-  }
-}
-
-/**
- * singleton EmbeddedGraphDatabase
- */
-private[scala] object SingeltonProvider {
-  private var ds: Option[DatabaseService] = None
-
-  def apply(neo4jStoreDir: String, configParams: Map[String, String]) = ds match {
-    case Some(x) => x
-    case None =>
-      import collection.JavaConversions.mapAsJavaMap
-      ds = Some(DatabaseServiceImpl(new EmbeddedGraphDatabase(
-        neo4jStoreDir, new jMap[String, String](configParams)))
-      )
-      ds.get
-  }
-}
-
-/**
- * provides a specific Database Service
- * in this case an singleton embedded database service
- */
-trait SingletonEmbeddedGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider {
-
-  /**
-   * directory where to store the data files
-   */
-  def neo4jStoreDir: String
-
-  /**
-   * setup configuration parameters
-   * @return Map[String, String] configuration parameters
-   */
-  def configParams = Map[String, String]()
-
-  /**
-   * using an instance of an embedded graph database
-   */
-  val ds: DatabaseService = SingeltonProvider(neo4jStoreDir, configParams)
-}
-
-/**
- * singleton provider
- */
-private[scala] object SingeltonBatchProvider {
-  private var inserter: Option[BatchInserter] = None
-
-  def apply(neo4jStoreDir: String) = inserter match {
-    case Some(x) => x
-    case None =>
-      inserter = Some(new BatchInserterImpl(neo4jStoreDir))
-      inserter.get
+  /** Using an instance of an embedded graph database */
+  lazy val ds: DatabaseService = {
+    val ds = new EmbeddedGraphDatabase(store, MMap(configParams.toSeq: _*))
+    ShutdownHookThread {
+      ds.shutdown()
+    }
+    ds
   }
 
-  lazy val ds: DatabaseService = DatabaseServiceImpl(inserter.get.getGraphDbService)
 }
 
-/**
- * provides a specific GraphDatabaseServiceProvider for
- * Batch processing
- */
-trait BatchGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider {
+/** Provides a specific GraphDatabaseServiceProvider for
+  * Batch processing
+  */
+trait BatchGraphDatabaseServiceProvider extends EmbeddedGraphDatabaseServiceProvider {
 
+  override lazy val ds: DatabaseService = {
+    val ds = BatchInserters.batchDatabase(store, MMap(configParams.toSeq: _*))
+    ShutdownHookThread {
+      ds.shutdown()
+    }
+    ds
+  }
 
-  /**
-   * instance of BatchInserter
-   */
-  def batchInserter = SingeltonBatchProvider(neo4jStoreDir)
+  /** Return instance of BatchInserter */
+  lazy val inserter = {
+    val inserter = BatchInserters.inserter(store, MMap(configParams.toSeq: _*))
+    ShutdownHookThread {
+      inserter.shutdown()
+    }
+    inserter
+  }
 
-  /**
-   * directory where to store the data files
-   */
-  def neo4jStoreDir: String
-
-  /**
-   * using an instance of an embedded graph database
-   */
-  val ds: DatabaseService = SingeltonBatchProvider.ds
 }
 
-/**
- * The Java binding for the Neo4j Server REST API wraps the REST calls
- * behind the well known GraphDatabaseService API
- */
+/** The Java binding for the Neo4j Server REST API wraps the REST calls
+  * behind the well known GraphDatabaseService API
+  */
 trait RestGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider {
 
-  /**
-   * has to be overwritten to define the server location
-   * @return URI server URI
-   */
-  def uri: URI
+  def testStore(str: String): URL = {
+    println(str)
+    catching(classOf[MalformedURLException]).either {
+      new URL(str)
+    }.fold(
+      fa => {
+        sys.error(fa.getLocalizedMessage)
+        sys.exit(-1)
+      },
+      fb => fb
+    )
+  }
 
-  /**1
-   * has to be overwritten to define username and password
-   * @return Option[(String, String)] user and password as Option of Strings
-   */
+  /** Has to be overwritten to define username and password
+    *
+    * @return Option[(String, String)] user and password as Option of Strings
+    */
   def userPw: Option[(String, String)] = None
 
-  /**
-   * creates a new instance of a REST Graph Database Service
-   */
-  val ds: DatabaseService = DatabaseServiceImpl(userPw match {
-    case None => new RestGraphDatabase(uri.toString)
-    case Some((u, p)) => new RestGraphDatabase(uri.toString, u, p)
-  })
+  /** Creates a new instance of a REST Graph Database Service */
+  lazy val ds: DatabaseService = {
+    val ds = userPw match {
+      case None => new RestGraphDatabase(store.toString)
+      case Some((u, p)) => new RestGraphDatabase(testStore(store).toString, u, p)
+    }
+    ShutdownHookThread {
+      ds.shutdown()
+    }
+    ds
+  }
+
 }

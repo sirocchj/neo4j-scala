@@ -4,14 +4,11 @@ import org.specs2.mutable.SpecificationWithJUnit
 import org.neo4j.scala.{EmbeddedGraphDatabaseServiceProvider, Neo4jWrapper}
 import org.neo4j.scala.util.CaseClassDeserializer
 import org.neo4j.graphdb.{Direction, DynamicRelationshipType}
-import sys.ShutdownHookThread
 
-/**
- * Test spec to check deserialization and serialization of case classes
- *
- * @author Christopher Schmidt
- */
-
+/** Test spec to check deserialization and serialization of case classes
+  *
+  * @author Christopher Schmidt
+  */
 case class Test(s: String, i: Int, ji: java.lang.Integer, d: Double, l: Long, b: Boolean, ar: Array[String])
 
 case class Test2(jl: java.lang.Long, jd: java.lang.Double, jb: java.lang.Boolean, nullString: String = null)
@@ -54,17 +51,14 @@ class DeSerializingWithoutNeo4jSpec extends SpecificationWithJUnit {
       resMap.get("ar").get mustEqual (Array("1", "2"))
     }
   }
+
 }
 
 class DeSerializingSpec extends SpecificationWithJUnit with Neo4jWrapper with EmbeddedGraphDatabaseServiceProvider {
 
-  def neo4jStoreDir = "/tmp/temp-neo-test2"
+  val store = "/tmp/temp-neo-test2"
 
   "Node" should {
-
-    ShutdownHookThread {
-      shutdown(ds)
-    }
 
     "be serializable with Test" in {
       val o = Test("sowas", 1, 2, 3.3, 10, true, Array("2", "3"))
@@ -136,4 +130,5 @@ class DeSerializingSpec extends SpecificationWithJUnit with Neo4jWrapper with Em
       success
     }
   }
+
 }

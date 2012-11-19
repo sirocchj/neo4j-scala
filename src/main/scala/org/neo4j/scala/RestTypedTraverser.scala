@@ -1,8 +1,7 @@
 package org.neo4j.scala
 
 import org.neo4j.graphdb.{TraversalPosition, Node}
-import org.neo4j.rest.graphdb.traversal.{RestOldTraverserWrapper}
-
+import org.neo4j.rest.graphdb.traversal.RestOldTraverserWrapper
 
 trait RestTypedTraverser extends TypedTraverserBase {
   self: Neo4jWrapper =>

@@ -2,19 +2,13 @@ package org.neo4j.scala.unittest
 
 import org.neo4j.graphdb._
 import org.specs2.mutable.SpecificationWithJUnit
-import sys.ShutdownHookThread
 import org.neo4j.scala.{RestGraphDatabaseServiceProvider, Neo4jWrapper}
-import java.net.URI
 
 class Neo4jWrapperRESTSpec extends SpecificationWithJUnit with Neo4jWrapper with RestGraphDatabaseServiceProvider {
 
-  def uri = new URI("http://localhost:7474/db/data/")
+  val store = "http://localhost:7474/db/data/"
 
   "NeoWrapper" should {
-
-    ShutdownHookThread {
-      shutdown(ds)
-    }
 
     "create a new relationship in --> relType --> notation" in {
       withTx {
@@ -157,4 +151,5 @@ class Neo4jWrapperRESTSpec extends SpecificationWithJUnit with Neo4jWrapper with
       }
     }
   }
+
 }

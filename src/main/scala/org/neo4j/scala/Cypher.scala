@@ -14,6 +14,7 @@ trait TypedExecutionResult extends ExecutionResult {
     * @return Iterator[T]
     */
   def asCC[T: Manifest](column: String): Iterator[T]
+
 }
 
 /** Wraps the Cypher class ExecutionResult and provides an additional
@@ -64,7 +65,7 @@ trait Cypher {
 
   self: Neo4jWrapper =>
 
-  lazy val engine = new ExecutionEngine(ds.gds)
+  lazy val engine = new ExecutionEngine(ds)
 
   implicit def toTypedExecutionResult(executionResult: ExecutionResult) = new TypedExecutionResultImpl(executionResult)
 

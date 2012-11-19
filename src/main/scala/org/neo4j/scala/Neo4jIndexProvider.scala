@@ -1,6 +1,6 @@
 package org.neo4j.scala
 
-import org.neo4j.graphdb.index.{Index, RelationshipIndex}
+import org.neo4j.graphdb.index.Index
 import collection.JavaConversions._
 import org.neo4j.graphdb.{PropertyContainer, Node}
 
@@ -19,7 +19,7 @@ trait Neo4jIndexProvider {
   /**
    * required DatabaseService provided by XXXServiceProvider
    */
-  val ds: DatabaseService
+  def ds: DatabaseService
 
   /**
    * has to be overwritten to define Node Index and configuration
@@ -33,21 +33,21 @@ trait Neo4jIndexProvider {
 
   /** Lazy initializes Indexes for Nodes */
   lazy val getNodeIndexStore: Map[String, Index[Node]] = (for {
-      (indexName, indexConfig) <- NodeIndexConfig
-      config = indexConfig match {
-        case Some(c) => getIndexManager.forNodes(indexName, c)
-        case _ => getIndexManager.forNodes(indexName)
-      }
-    } yield indexName -> config).toMap
+    (indexName, indexConfig) <- NodeIndexConfig
+    config = indexConfig match {
+      case Some(c) => getIndexManager.forNodes(indexName, c)
+      case _ => getIndexManager.forNodes(indexName)
+    }
+  } yield indexName -> config).toMap
 
   /** Lazy initializes Indexes for Nodes */
   lazy val getRelationIndexStore = (for {
-      (indexName, indexConfig) <- RelationIndexConfig
-      config = indexConfig match {
-        case Some(c) => getIndexManager.forRelationships(indexName, c)
-        case _ => getIndexManager.forRelationships(indexName)
-      }
-    } yield indexName -> config).toMap
+    (indexName, indexConfig) <- RelationIndexConfig
+    config = indexConfig match {
+      case Some(c) => getIndexManager.forRelationships(indexName, c)
+      case _ => getIndexManager.forRelationships(indexName)
+    }
+  } yield indexName -> config).toMap
 
   /**
    * returns the index manager
@@ -74,13 +74,23 @@ trait Neo4jIndexProvider {
    * wrapper class for subsequent implicit conversion
    */
   class IndexWrapper[T <: PropertyContainer](i: Index[T]) {
-    def +=(t: T, k: String, v: AnyRef) = i.add(t, k, v)
 
-    def -=(t: T, k: String, v: AnyRef) = i.remove(t, k, v)
+    def +=(t: T, k: String, v: AnyRef) {
+      i.add(t, k, v)
+    }
 
-    def -=(t: T, k: String) = i.remove(t, k)
+    def -=(t: T, k: String, v: AnyRef) {
+      i.remove(t, k, v)
+    }
 
-    def -=(t: T) = i.remove(t)
+    def -=(t: T, k: String) {
+      i.remove(t, k)
+    }
+
+    def -=(t: T) {
+      i.remove(t)
+    }
+
   }
 
   /**

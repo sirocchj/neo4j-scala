@@ -3,27 +3,20 @@ package org.neo4j.scala.unittest
 import org.specs2.mutable.SpecificationWithJUnit
 import org.neo4j.scala.{Neo4jIndexProvider, EmbeddedGraphDatabaseServiceProvider, Neo4jWrapper}
 import collection.JavaConversions._
-import sys.ShutdownHookThread
 
-/**
- * Test spec to check usage of index convenience methods
- *
- * @author Christopher Schmidt
- */
-
+/** Test spec to check usage of index convenience methods
+  *
+  * @author Christopher Schmidt
+  */
 class IndexTestSpec extends SpecificationWithJUnit with Neo4jWrapper with EmbeddedGraphDatabaseServiceProvider with Neo4jIndexProvider {
 
-  def neo4jStoreDir = "/tmp/temp-neo-index-test"
+  val store = "/tmp/temp-neo-index-test"
 
   override def NodeIndexConfig = ("MyTestIndex", Map("provider" -> "lucene", "type" -> "fulltext")) :: Nil
 
   val nodeIndex = getNodeIndex("MyTestIndex").get
 
   "Neo4jIndexProvider" should {
-
-    ShutdownHookThread {
-      shutdown(ds)
-    }
 
     "use the fulltext search index" in {
 

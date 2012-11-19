@@ -1,18 +1,11 @@
 package org.neo4j.scala.unittest
 
 import org.specs2.mutable.SpecificationWithJUnit
-import java.net.URI
-import sys.ShutdownHookThread
 import org.neo4j.scala._
-
 
 class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper with RestGraphDatabaseServiceProvider with RestTypedTraverser {
 
-  def uri = new URI("http://localhost:7474/db/data/")
-
-  ShutdownHookThread {
-    shutdown(ds)
-  }
+  val store = "http://localhost:7474/db/data/"
 
   final val nodes = Map("Neo" -> "Hacker",
     "Morpheus" -> "Hacker",
@@ -20,7 +13,6 @@ class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper wi
     "Cypher" -> "Hacker",
     "Agent Smith" -> "Program",
     "The Architect" -> "Whatever")
-
 
   val nodeMap = withTx {
     implicit neo =>
@@ -65,7 +57,6 @@ class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper wi
       erg.length must be_==(2)
     }
 
-
     "be able to traverse one Node with JS Prune Evaluator" in {
       val erg = nodeMap("Neo").doTraverse[Test_MatrixBase](follow(BREADTH_FIRST) -- "KNOWS" ->- "CODED_BY" -<- "FOO") {
 
@@ -82,7 +73,6 @@ class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper wi
       erg.length must be_==(1)
     }
 
-
     "be able to traverse one Node with Max Depth 100" in {
 
       /**
@@ -95,7 +85,6 @@ class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper wi
       erg must contain(Test_Matrix("Cypher", "Hacker"))
       erg.length must be_==(1)
     }
-
 
     "be able to traverse with builtin filter \"ReturnAllButStartNode\" with Max Depth 1" in {
 
@@ -110,7 +99,6 @@ class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper wi
       erg.length must be_==(2)
     }
 
-
     "be able to traverse with JS Filter \"true\" with Max Depth 1" in {
 
       /**
@@ -123,7 +111,6 @@ class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper wi
       erg must contain(Test_Matrix("Neo", "Hacker"), Test_Matrix("Morpheus", "Hacker"), Test_Matrix("Trinity", "Hacker"))
       erg.length must be_==(3)
     }
-
 
     "be able to traverse nodes of type Test_Matrix" in {
 
@@ -152,4 +139,5 @@ class TypedTraverserRESTSpec extends SpecificationWithJUnit with Neo4jWrapper wi
       erg.length must be_==(3)
     }
   }
+
 }

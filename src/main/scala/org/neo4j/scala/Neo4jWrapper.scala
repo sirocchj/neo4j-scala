@@ -4,7 +4,6 @@ import util.CaseClassDeserializer
 import collection.JavaConversions._
 import CaseClassDeserializer._
 import org.neo4j.graphdb._
-import index.IndexManager
 
 /**
  * Extend your class with this trait to get really neat new notation for creating
@@ -20,27 +19,26 @@ import index.IndexManager
  */
 trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplicits {
 
-  /**
-   * Execute instructions within a Neo4j transaction; rollback if exception is raised and
-   * commit otherwise; and return the return value from the operation.
-   */
+  /** Execute instructions within a Neo4j transaction; rollback if exception is raised and
+    * commit otherwise; and return the return value from the operation.
+    */
   def withTx[T <: Any](operation: DatabaseService => T): T = {
     val tx = synchronized {
-      ds.gds.beginTx
+      ds.beginTx
     }
     try {
       val ret = operation(ds)
-      tx.success
-      return ret
+      tx.success()
+      ret
     } finally {
-      tx.finish
+      tx.finish()
     }
   }
 
   /**
    * creates a new Node from Database service
    */
-  def createNode(implicit ds: DatabaseService): Node = ds.gds.createNode
+  def createNode(implicit ds: DatabaseService): Node = ds.createNode
 
   /**
    * convenience method to create and serialize a case class
@@ -56,7 +54,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @throws NotFoundException if not found
    */
   def getNodeById(id: Long)(implicit ds: DatabaseService): Node =
-    ds.gds.getNodeById(id)
+    ds.getNodeById(id)
 
   /**
    * Looks up a relationship by id.
@@ -66,7 +64,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @throws NotFoundException if not found
    */
   def getRelationshipById(id: Long)(implicit ds: DatabaseService): Relationship =
-    ds.gds.getRelationshipById(id)
+    ds.getRelationshipById(id)
 
   /**
    * Returns the reference node, which is a "starting point" in the node
@@ -80,7 +78,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @throws NotFoundException if unable to get the reference node
    */
   def getReferenceNode(implicit ds: DatabaseService): Node =
-    ds.gds.getReferenceNode
+    ds.getReferenceNode
 
   /**
    * Returns all nodes in the node space.
@@ -88,7 +86,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @return all nodes in the node space
    */
   def getAllNodes(implicit ds: DatabaseService): Iterable[Node] =
-    ds.gds.getAllNodes
+    ds.getAllNodes
 
   /**
    * Returns all relationship types currently in the underlying store.
@@ -103,21 +101,15 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @return all relationship types in the underlying store
    */
   def getRelationshipTypes(implicit ds: DatabaseService): Iterable[RelationshipType] =
-    ds.gds.getRelationshipTypes
+    ds.getRelationshipTypes
 
-  /**
-   * Shuts down Neo4j. After this method has been invoked, it's invalid to
-   * invoke any methods in the Neo4j API and all references to this instance
-   * of GraphDatabaseService should be discarded.
-   */
-  def shutdown(implicit ds: DatabaseService): Unit =
-    ds.gds.shutdown
 }
 
 /**
  * Neo4jWrapper Object
  */
 object Neo4jWrapper extends Neo4jWrapperImplicits {
+
   /**
    * this name will be used to store the class name of
    * the serialized case class that will be verified
@@ -180,12 +172,14 @@ object Neo4jWrapper extends Neo4jWrapperImplicits {
         manifest[T].erasure.getName + " does not fit to serialized properties")
     }
   }
+
 }
 
 /**
  * creates incoming and outgoing relationships
  */
 private[scala] class NodeRelationshipMethods(node: Node, rel: Relationship = null) {
+
   def -->(relType: RelationshipType) = new OutgoingRelationshipBuilder(node, relType)
 
   def <--(relType: RelationshipType) = new IncomingRelationshipBuilder(node, relType)
@@ -200,26 +194,31 @@ private[scala] class NodeRelationshipMethods(node: Node, rel: Relationship = nul
    * <pre>start --> "KNOWS" --> end <(MyCaseClass(...))</pre>
    */
   def <(cc: AnyRef): Relationship = Neo4jWrapper.serialize(cc, rel)
+
 }
 
 /**
  * Half-way through building an outgoing relationship
  */
 private[scala] class OutgoingRelationshipBuilder(fromNode: Node, relType: RelationshipType) {
+
   def -->(toNode: Node) = {
     val rel = fromNode.createRelationshipTo(toNode, relType)
     new NodeRelationshipMethods(toNode, rel)
   }
+
 }
 
 /**
  * Half-way through building an incoming relationship
  */
 private[scala] class IncomingRelationshipBuilder(toNode: Node, relType: RelationshipType) {
+
   def <--(fromNode: Node) = {
     val rel = fromNode.createRelationshipTo(toNode, relType)
     new NodeRelationshipMethods(fromNode, rel)
   }
+
 }
 
 /**
@@ -241,9 +240,12 @@ private[scala] class RichPropertyContainer(propertyContainer: PropertyContainer)
    * updates the property
    * <code>node("property") = value</code>
    */
-  def update(property: String, value: Any): Unit = value match {
-    case null =>
-    case None =>
-    case _ => propertyContainer.setProperty(property, value)
+  def update(property: String, value: Any) {
+    value match {
+      case null =>
+      case None =>
+      case _ => propertyContainer.setProperty(property, value)
+    }
   }
+
 }

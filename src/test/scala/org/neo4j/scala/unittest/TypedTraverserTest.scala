@@ -1,16 +1,11 @@
 package org.neo4j.scala.unittest
 
 import org.specs2.mutable.SpecificationWithJUnit
-import sys.ShutdownHookThread
 import org.neo4j.scala._
 
-class TypedTraverserSpec extends SpecificationWithJUnit with Neo4jWrapper with SingletonEmbeddedGraphDatabaseServiceProvider with TypedTraverser {
+class TypedTraverserSpec extends SpecificationWithJUnit with Neo4jWrapper with EmbeddedGraphDatabaseServiceProvider with TypedTraverser {
 
-  def neo4jStoreDir = "/tmp/temp-neo-TypedTraverserSpec"
-
-  ShutdownHookThread {
-    shutdown(ds)
-  }
+  val store = "/tmp/temp-neo-TypedTraverserSpec"
 
   final val nodes = Map("Neo" -> "Hacker",
     "Morpheus" -> "Hacker",
@@ -18,7 +13,6 @@ class TypedTraverserSpec extends SpecificationWithJUnit with Neo4jWrapper with S
     "Cypher" -> "Hacker",
     "Agent Smith" -> "Program",
     "The Architect" -> "Whatever")
-
 
   val nodeMap = withTx {
     implicit neo =>
@@ -61,4 +55,5 @@ class TypedTraverserSpec extends SpecificationWithJUnit with Neo4jWrapper with S
       erg.length must be_==(1)
     }
   }
+
 }

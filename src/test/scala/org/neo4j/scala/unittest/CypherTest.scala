@@ -2,17 +2,12 @@ package org.neo4j.scala.unittest
 
 import org.specs2.mutable.SpecificationWithJUnit
 import org.neo4j.scala._
-import sys.ShutdownHookThread
 import org.neo4j.scala.Test_Matrix
+import sys.ShutdownHookThread
 
+class CypherSpec extends SpecificationWithJUnit with Neo4jWrapper with EmbeddedGraphDatabaseServiceProvider with Cypher {
 
-class CypherSpec extends SpecificationWithJUnit with Neo4jWrapper with SingletonEmbeddedGraphDatabaseServiceProvider with Cypher {
-
-  def neo4jStoreDir = "/tmp/temp-neo-CypherTest"
-
-  ShutdownHookThread {
-    shutdown(ds)
-  }
+  val store = "/tmp/temp-neo-CypherTest"
 
   final val nodes = Map("Neo" -> "Hacker",
     "Morpheus" -> "Hacker",
@@ -20,7 +15,6 @@ class CypherSpec extends SpecificationWithJUnit with Neo4jWrapper with Singleton
     "Cypher" -> "Hacker",
     "Agent Smith" -> "Program",
     "The Architect" -> "Whatever")
-
 
   val nodeMap = withTx {
     implicit neo =>
@@ -46,7 +40,7 @@ class CypherSpec extends SpecificationWithJUnit with Neo4jWrapper with Singleton
 
       val params1 = Map("id" -> nodeMap("Neo").getId)
       val node1 = executionPlan.execute(params1).asCC[Test_Matrix]("n")
-      val params2 = Map("id" -> List(nodeMap("Neo"),nodeMap("Morpheus")).map(_.getId))
+      val params2 = Map("id" -> List(nodeMap("Neo"), nodeMap("Morpheus")).map(_.getId))
       val nodes = executionPlan.execute(params2).asCC[Test_Matrix]("n").toList
       node1.next().name must be_==("Neo")
       nodes.size must be_==(2)
@@ -67,4 +61,5 @@ class CypherSpec extends SpecificationWithJUnit with Neo4jWrapper with Singleton
     }
 
   }
+
 }
