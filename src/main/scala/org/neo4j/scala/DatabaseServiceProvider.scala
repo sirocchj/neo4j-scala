@@ -1,22 +1,23 @@
 package org.neo4j.scala
 
+import collection.JavaConversions.mutableMapAsJavaMap
+import collection.mutable.{Map => MMap}
+import java.io.File
+import java.net.{MalformedURLException, URL}
+import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.kernel.EmbeddedGraphDatabase
 import org.neo4j.rest.graphdb.RestGraphDatabase
 import org.neo4j.unsafe.batchinsert.BatchInserters
-
-import collection.JavaConversions.mutableMapAsJavaMap
-import collection.mutable.{Map => MMap}
-import sys.ShutdownHookThread
 import scala.util.control.Exception._
-
-import java.net.{MalformedURLException, URL}
-import org.neo4j.graphdb.GraphDatabaseService
+import sys.ShutdownHookThread
 
 /**
  * Interface for a GraphDatabaseServiceProvider
  * must be implemented by and Graph Database Service Provider
  */
 trait GraphDatabaseServiceProvider {
+
+  val removeOnShutdown = false
 
   def store: String
 
@@ -25,6 +26,29 @@ trait GraphDatabaseServiceProvider {
   implicit def wrapGraphDatabaseService(gds: GraphDatabaseService) = DatabaseServiceImpl(gds)
 
   implicit def unwrapGraphDatabaseService(ds: DatabaseService) = ds.gds
+
+  implicit def dirToPimpedDir(storeDir: String) = new {
+
+    def rmdir() {
+      def rmdirRec(f: File) {
+        f.listFiles().foreach {
+          file =>
+            if (file.isDirectory) rmdirRec(file)
+            file.delete()
+        }
+        f.delete()
+      }
+      rmdirRec(new File(storeDir))
+    }
+
+  }
+
+  private[scala] def registerShutdownHook() {
+    ShutdownHookThread {
+      ds.shutdown()
+      if (removeOnShutdown) store.rmdir()
+    }
+  }
 
 }
 
@@ -43,9 +67,7 @@ trait EmbeddedGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider 
   /** Using an instance of an embedded graph database */
   lazy val ds: DatabaseService = {
     val ds = new EmbeddedGraphDatabase(store, MMap(configParams.toSeq: _*))
-    ShutdownHookThread {
-      ds.shutdown()
-    }
+    registerShutdownHook()
     ds
   }
 
@@ -58,9 +80,7 @@ trait BatchGraphDatabaseServiceProvider extends EmbeddedGraphDatabaseServiceProv
 
   override lazy val ds: DatabaseService = {
     val ds = BatchInserters.batchDatabase(store, MMap(configParams.toSeq: _*))
-    ShutdownHookThread {
-      ds.shutdown()
-    }
+    registerShutdownHook()
     ds
   }
 
@@ -69,6 +89,7 @@ trait BatchGraphDatabaseServiceProvider extends EmbeddedGraphDatabaseServiceProv
     val inserter = BatchInserters.inserter(store, MMap(configParams.toSeq: _*))
     ShutdownHookThread {
       inserter.shutdown()
+      if (removeOnShutdown) store.rmdir()
     }
     inserter
   }
@@ -105,9 +126,7 @@ trait RestGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider {
       case None => new RestGraphDatabase(store.toString)
       case Some((u, p)) => new RestGraphDatabase(testStore(store).toString, u, p)
     }
-    ShutdownHookThread {
-      ds.shutdown()
-    }
+    registerShutdownHook()
     ds
   }
 
