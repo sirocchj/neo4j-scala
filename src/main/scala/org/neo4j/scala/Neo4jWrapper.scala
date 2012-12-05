@@ -46,6 +46,9 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
   def createNode(cc: AnyRef)(implicit ds: DatabaseService): Node =
     Neo4jWrapper.serialize(cc, createNode)
 
+  def createNodes[A <: AnyRef](model: Seq[A])(implicit ds: DatabaseService) =
+    model.map(el => (el, createNode(el))).toMap
+
   /**
    * Looks up a node by id.
    *
