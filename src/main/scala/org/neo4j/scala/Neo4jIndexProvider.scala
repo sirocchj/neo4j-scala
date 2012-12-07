@@ -1,7 +1,7 @@
 package org.neo4j.scala
 
-import org.neo4j.graphdb.index.Index
 import collection.JavaConversions._
+import org.neo4j.graphdb.index.Index
 import org.neo4j.graphdb.{PropertyContainer, Node}
 
 /**
@@ -11,6 +11,8 @@ import org.neo4j.graphdb.{PropertyContainer, Node}
 
 trait Neo4jIndexProvider {
 
+  import org.neo4j.graphdb.GraphDatabaseService
+
   /**
    * type convenience definition
    */
@@ -19,7 +21,7 @@ trait Neo4jIndexProvider {
   /**
    * required DatabaseService provided by XXXServiceProvider
    */
-  def ds: DatabaseService
+  def ds: GraphDatabaseService
 
   /**
    * has to be overwritten to define Node Index and configuration
@@ -53,7 +55,7 @@ trait Neo4jIndexProvider {
    * returns the index manager
    * @return IndexManager the index manager
    */
-  def getIndexManager = ds.gds.index
+  def getIndexManager = ds.index
 
   /**
    * @return Option[Index[Node]] the created index if available

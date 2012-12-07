@@ -1,9 +1,8 @@
 package org.neo4j.scala
 
-import util.CaseClassDeserializer
 import collection.JavaConversions._
-import CaseClassDeserializer._
 import org.neo4j.graphdb._
+import util.CaseClassDeserializer.{serialize => serializeCC, deserialize => deserializeCC}
 
 /**
  * Extend your class with this trait to get really neat new notation for creating
@@ -22,7 +21,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
   /** Execute instructions within a Neo4j transaction; rollback if exception is raised and
     * commit otherwise; and return the return value from the operation.
     */
-  def withTx[T <: Any](operation: DatabaseService => T): T = {
+  def withTx[T <: Any](operation: GraphDatabaseService => T): T = {
     val tx = synchronized {
       ds.beginTx
     }
@@ -38,15 +37,15 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
   /**
    * creates a new Node from Database service
    */
-  def createNode(implicit ds: DatabaseService): Node = ds.createNode
+  def createNode(implicit ds: GraphDatabaseService): Node = ds.createNode
 
   /**
    * convenience method to create and serialize a case class
    */
-  def createNode(cc: AnyRef)(implicit ds: DatabaseService): Node =
+  def createNode(cc: AnyRef)(implicit ds: GraphDatabaseService): Node =
     Neo4jWrapper.serialize(cc, createNode)
 
-  def createNodes[A <: AnyRef](model: Seq[A])(implicit ds: DatabaseService) =
+  def createNodes[A <: AnyRef](model: Seq[A])(implicit ds: GraphDatabaseService) =
     model.map(el => (el, createNode(el))).toMap
 
   /**
@@ -56,7 +55,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @return the node with id <code>id</code> if found
    * @throws NotFoundException if not found
    */
-  def getNodeById(id: Long)(implicit ds: DatabaseService): Node =
+  def getNodeById(id: Long)(implicit ds: GraphDatabaseService): Node =
     ds.getNodeById(id)
 
   /**
@@ -66,7 +65,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @return the relationship with id <code>id</code> if found
    * @throws NotFoundException if not found
    */
-  def getRelationshipById(id: Long)(implicit ds: DatabaseService): Relationship =
+  def getRelationshipById(id: Long)(implicit ds: GraphDatabaseService): Relationship =
     ds.getRelationshipById(id)
 
   /**
@@ -80,7 +79,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    * @return the reference node
    * @throws NotFoundException if unable to get the reference node
    */
-  def getReferenceNode(implicit ds: DatabaseService): Node =
+  def getReferenceNode(implicit ds: GraphDatabaseService): Node =
     ds.getReferenceNode
 
   /**
@@ -88,7 +87,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    *
    * @return all nodes in the node space
    */
-  def getAllNodes(implicit ds: DatabaseService): Iterable[Node] =
+  def getAllNodes(implicit ds: GraphDatabaseService): Iterable[Node] =
     ds.getAllNodes
 
   /**
@@ -103,7 +102,7 @@ trait Neo4jWrapper extends GraphDatabaseServiceProvider with Neo4jWrapperImplici
    *
    * @return all relationship types in the underlying store
    */
-  def getRelationshipTypes(implicit ds: DatabaseService): Iterable[RelationshipType] =
+  def getRelationshipTypes(implicit ds: GraphDatabaseService): Iterable[RelationshipType] =
     ds.getRelationshipTypes
 
 }
@@ -125,7 +124,7 @@ object Neo4jWrapper extends Neo4jWrapperImplicits {
    * for null values not property will be set
    */
   def serialize[T <: PropertyContainer](cc: AnyRef, pc: PropertyContainer): T = {
-    CaseClassDeserializer.serialize(cc).foreach {
+    serializeCC(cc).foreach {
       case (name, null) =>
       case (name, value) => pc.setProperty(name, value)
     }
@@ -142,7 +141,7 @@ object Neo4jWrapper extends Neo4jWrapperImplicits {
     _toCCPossible(pc) match {
       case Some(serializedClass) =>
         val kv = for (k <- pc.getPropertyKeys; v = pc.getProperty(k)) yield (k -> v)
-        val o = deserialize[T](serializedClass, kv.toMap)
+        val o = deserializeCC[T](serializedClass, kv.toMap)
         Some(o)
       case _ => None
     }

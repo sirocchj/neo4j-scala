@@ -44,7 +44,7 @@ trait Neo4jWrapperImplicits {
   /**
    * Stuff for Indexes
    */
-  implicit def indexManager(implicit ds: DatabaseService) = ds.gds.index
+  implicit def indexManager(implicit ds: GraphDatabaseService) = ds.index
 
   /**
    * for serialization

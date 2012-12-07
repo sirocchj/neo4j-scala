@@ -1,7 +1,7 @@
 package org.neo4j.scala
 
-import org.neo4j.cypher.{ExecutionEngine, ExecutionPlan, ExecutionResult}
 import java.io.PrintWriter
+import org.neo4j.cypher.{ExecutionEngine, ExecutionResult}
 import org.neo4j.graphdb.PropertyContainer
 
 /** Add additional as[T] interface where T has to be a case class */
@@ -63,7 +63,7 @@ class TypedExecutionResultImpl(val er: ExecutionResult) extends TypedExecutionRe
 /** Main Cypher support trait */
 trait Cypher {
 
-  self: Neo4jWrapper =>
+  this: Neo4jWrapper =>
 
   lazy val engine = new ExecutionEngine(ds)
 

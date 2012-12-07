@@ -17,15 +17,23 @@ import sys.ShutdownHookThread
  */
 trait GraphDatabaseServiceProvider {
 
-  val removeOnShutdown = false
-
   def store: String
 
-  def ds: DatabaseService
+  def ds: GraphDatabaseService
 
-  implicit def wrapGraphDatabaseService(gds: GraphDatabaseService) = DatabaseServiceImpl(gds)
+  private[scala] def registerShutdownHook() {
+    ShutdownHookThread {
+      ds.shutdown()
+    }
+  }
 
-  implicit def unwrapGraphDatabaseService(ds: DatabaseService) = ds.gds
+}
+
+private[scala] trait RemovableStorage {
+
+  this: GraphDatabaseServiceProvider =>
+
+  val removeOnShutdown = false
 
   implicit def dirToPimpedDir(storeDir: String) = new {
 
@@ -43,7 +51,7 @@ trait GraphDatabaseServiceProvider {
 
   }
 
-  private[scala] def registerShutdownHook() {
+  override private[scala] def registerShutdownHook() {
     ShutdownHookThread {
       ds.shutdown()
       if (removeOnShutdown) store.rmdir()
@@ -56,7 +64,7 @@ trait GraphDatabaseServiceProvider {
  * provides a specific Database Service
  * in this case an embedded database service
  */
-trait EmbeddedGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider {
+trait EmbeddedGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider with RemovableStorage {
 
   /** Setup configuration parameters
     *
@@ -65,7 +73,7 @@ trait EmbeddedGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider 
   def configParams = Map[String, String]()
 
   /** Using an instance of an embedded graph database */
-  lazy val ds: DatabaseService = {
+  lazy val ds = {
     val ds = new EmbeddedGraphDatabase(store, MMap(configParams.toSeq: _*))
     registerShutdownHook()
     ds
@@ -76,22 +84,23 @@ trait EmbeddedGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider 
 /** Provides a specific GraphDatabaseServiceProvider for
   * Batch processing
   */
-trait BatchGraphDatabaseServiceProvider extends EmbeddedGraphDatabaseServiceProvider {
+trait BatchGraphDatabaseServiceProvider {
 
-  override lazy val ds: DatabaseService = {
-    val ds = BatchInserters.batchDatabase(store, MMap(configParams.toSeq: _*))
-    registerShutdownHook()
-    ds
-  }
+  def store: String
+
+  /** Setup configuration parameters
+    *
+    * @return Map[String, String] configuration parameters
+    */
+  def configParams = Map[String, String]()
 
   /** Return instance of BatchInserter */
-  lazy val inserter = {
-    val inserter = BatchInserters.inserter(store, MMap(configParams.toSeq: _*))
+  lazy val batchInserter = {
+    val batchInserter = BatchInserters.inserter(store, MMap(configParams.toSeq: _*))
     ShutdownHookThread {
-      inserter.shutdown()
-      if (removeOnShutdown) store.rmdir()
+      batchInserter.shutdown()
     }
-    inserter
+    batchInserter
   }
 
 }
@@ -121,7 +130,7 @@ trait RestGraphDatabaseServiceProvider extends GraphDatabaseServiceProvider {
   def userPw: Option[(String, String)] = None
 
   /** Creates a new instance of a REST Graph Database Service */
-  lazy val ds: DatabaseService = {
+  lazy val ds = {
     val ds = userPw match {
       case None => new RestGraphDatabase(store.toString)
       case Some((u, p)) => new RestGraphDatabase(testStore(store).toString, u, p)
